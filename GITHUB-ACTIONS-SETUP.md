@@ -5,12 +5,16 @@ This guide will help you migrate from server-based automation to GitHub Actions,
 ## Overview
 
 The GitHub Actions setup provides:
-- **Automatic token refresh** every 10 minutes
-- **Daily credit loading** at 10:00 AM Israel time (weekdays only)
+- **Automatic token refresh** before each credit-loading attempt
+- **Daily credit loading** Sunday-Thursday, with primary and fallback schedules
 - **Secure token storage** in GitHub secrets
 - **Automatic token updates** when refreshed
 - **Manual testing** capabilities
 - **Detailed logging** with artifact storage
+
+See [Scheduling reliability and payment safety](README.md#scheduling-reliability-and-payment-safety)
+for the current schedules, manual-load exclusions, duplicate-attempt guard and
+Keep Alive permissions. GitHub schedules are best-effort, not guaranteed timers.
 
 ## Prerequisites
 
@@ -126,15 +130,16 @@ Settings Page (left sidebar):
 Once you've added all secrets, the GitHub Actions will start running automatically. You can:
 
 1. **Check the Actions tab** in your repository
-2. **Manually trigger a test** by going to Actions → "10bis Automation" → "Run workflow"
+2. **Manually trigger offline tests** by going to Actions → "Offline Tests" → "Run workflow"
 3. **View logs** to see if everything is working
 
 ## How It Works
 
 ### Automatic Scheduling
 
-- **Token Refresh**: Runs every 10 minutes to keep your tokens fresh
-- **Credit Loading**: Runs daily at 10:00 AM Israel time, Monday through Friday
+- **Token Refresh**: Runs before loading; the standalone workflow is manual only
+- **Credit Loading**: Scheduled Sunday-Thursday at 07:17, 10:17 and 13:17 UTC,
+  guarded against another payment attempt on the same Israel date
 - **Weekend Skip**: Automatically skips Friday and Saturday
 
 ### Token Management
@@ -148,9 +153,13 @@ Once you've added all secrets, the GitHub Actions will start running automatical
 You can manually test the system:
 
 1. Go to your repository's **Actions** tab
-2. Click on **"10bis Automation"**
+2. Click on **"Offline Tests"**
 3. Click **"Run workflow"**
-4. This will run both configuration tests and token refresh
+4. This runs offline regression tests without using real credentials or making payments
+
+**"Refresh Token"** rotates real tokens. **"Load Credit"** can make a real payment;
+it is not a dry run. If you have loaded manually, first exclude that Israel date
+using the `CREDIT_SKIP_DATES` Actions variable as described in the README.
 
 ## Monitoring and Troubleshooting
 
@@ -249,15 +258,13 @@ If something goes wrong:
 
 ### Customizing the Schedule
 
-To change when the automation runs, edit [`.github/workflows/10bis-automation.yml`](.github/workflows/10bis-automation.yml):
+To change when the automation runs, edit [`.github/workflows/load-credit.yml`](.github/workflows/load-credit.yml).
+Keep the daily guard and workflow concurrency enabled:
 
 ```yaml
 on:
   schedule:
-    # Token refresh every 5 minutes instead of 10
-    - cron: '*/5 * * * *'
-    # Credit loading at 9:00 AM instead of 10:00 AM
-    - cron: '0 6 * * 0,1,2,3,4'  # 6 AM UTC = 9 AM Israel time
+    - cron: '17 7,10,13 * * 0,1,2,3,4'
 ```
 
 ### Adding Notifications
@@ -284,7 +291,10 @@ If you encounter issues:
 
 The GitHub Actions setup includes these new files:
 
-- [`.github/workflows/10bis-automation.yml`](.github/workflows/10bis-automation.yml) - Main workflow definition
+- [`.github/workflows/load-credit.yml`](.github/workflows/load-credit.yml) - Guarded credit loading with fallback schedules
+- [`.github/workflows/refresh-token.yml`](.github/workflows/refresh-token.yml) - Manual token refresh
+- [`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml) - Monthly repository activity
+- [`.github/workflows/test.yml`](.github/workflows/test.yml) - Offline regression tests
 - [`github-actions-utils.js`](github-actions-utils.js) - Utilities for GitHub Actions compatibility
 - [`github-refresh-token.js`](github-refresh-token.js) - Token refresh script for GitHub Actions
 - [`github-load-credit.js`](github-load-credit.js) - Credit loading script for GitHub Actions

@@ -147,10 +147,11 @@ class GitHubActionsUtils {
     /**
      * Check if current day is Friday (5) or Saturday (6)
      */
-    isWeekend() {
-        const today = new Date();
-        const dayOfWeek = today.getDay();
-        return dayOfWeek === 5 || dayOfWeek === 6; // Friday or Saturday
+    isWeekend(date = new Date()) {
+        const day = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Jerusalem', weekday: 'short'
+        }).format(date);
+        return day === 'Fri' || day === 'Sat';
     }
 
     /**
@@ -172,7 +173,8 @@ class GitHubActionsUtils {
      * Validate required config fields
      */
     validateConfig(config, requiredFields) {
-        const missingFields = requiredFields.filter(field => !config[field] || config[field].trim() === '');
+        const missingFields = requiredFields.filter(field =>
+            config[field] === undefined || config[field] === null || String(config[field]).trim() === '');
         if (missingFields.length > 0) {
             throw new Error(`Missing required configuration fields: ${missingFields.join(', ')}`);
         }
