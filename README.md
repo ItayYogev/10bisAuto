@@ -61,6 +61,13 @@ An automated system for managing 10bis credit loading and token refresh operatio
   inspect any 403 failure rather than assuming the workflow kept scheduling active.
 - Confirm Actions are enabled and these workflows are **active** on the default
   branch. A disabled workflow cannot wake itself up.
+- Temporary [Schedule Diagnostic (No Payment)](.github/workflows/schedule-diagnostic.yml)
+  runs at minutes 08, 23, 38 and 53 of every hour (UTC). It only records the event,
+  cron expression and actual runner time in the job log and summary, with no
+  checkout, credentials or payment requests. Only an automatically created
+  `schedule` run demonstrates schedule delivery; publication or passing offline
+  tests does not. This does not change or trigger Load Credit. Disable this
+  diagnostic in Actions after collecting evidence to avoid ongoing runner usage.
 
 Run `npm test` for offline regression tests; these never contact 10bis, refresh real
 tokens, send Teams notifications, or load credit. The older `test.js` targets server
