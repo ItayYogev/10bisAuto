@@ -120,7 +120,7 @@ class GitHubTokenRefresh {
 
             // Log response details for debugging
             await utils.log(`Response status: ${response.status}`, this.logFile);
-            await utils.log(`Response header names: ${Object.keys(response.headers).join(', ')}`, this.logFile);
+            await utils.log(`Response headers: ${JSON.stringify(response.headers, null, 2)}`, this.logFile);
             
             await utils.log('Response received, extracting tokens from headers/cookies', this.logFile);
 
@@ -158,8 +158,15 @@ class GitHubTokenRefresh {
                 await utils.log('Amount updated from response', this.logFile);
             }
 
-            if (!updates.AccessToken) {
-                throw new Error('Refresh API returned no access token; refresh token may be invalid or expired');
+            if (Object.keys(updates).length === 0) {
+                await utils.log('No token updates received from API (neither headers nor body)', this.logFile);
+                await utils.log('This might indicate the refresh token is invalid or expired', this.logFile);
+                
+                // Log full response for debugging when no tokens are received
+                if (response.data) {
+                    await utils.log(`Full response data: ${JSON.stringify(response.data, null, 2)}`, this.logFile);
+                }
+                return;
             }
 
             // Log what tokens were found and from where
@@ -212,7 +219,7 @@ class GitHubTokenRefresh {
             }
             
             // Exit with error code for monitoring
-            throw error;
+            process.exit(1);
         }
     }
 

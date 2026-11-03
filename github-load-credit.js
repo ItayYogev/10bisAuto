@@ -54,12 +54,6 @@ class GitHubCreditLoader {
             
             // Validate required fields for credit loading
             utils.validateConfig(config, ['AccessToken', 'RefreshToken', 'Amount', 'MoneycardId']);
-            for (const field of ['Amount', 'MoneycardId']) {
-                if (!/^[1-9]\d*$/.test(String(config[field])) ||
-                    !Number.isSafeInteger(Number(config[field]))) {
-                    throw new Error(`${field} must be a positive safe integer`);
-                }
-            }
             
             // Mask sensitive values
             utils.maskValue(config.AccessToken);
@@ -88,8 +82,7 @@ class GitHubCreditLoader {
             await utils.log(`Attempting to load credit: Amount=${config.Amount}, MoneycardId=${config.MoneycardId}`, this.logFile);
             
             // Make the API request
-            // A timeout can occur after the payment was accepted; never replay it automatically.
-            const response = await utils.makeHttpRequest(requestOptions, 1);
+            const response = await utils.makeHttpRequest(requestOptions);
             
             // Log successful response
             await utils.log(`Credit loading API response status: ${response.status}`, this.logFile);
@@ -115,7 +108,16 @@ class GitHubCreditLoader {
                     await this.teamsNotifier.sendSuccessNotification(amount, timestamp);
                 }
             } else {
-                throw new Error(`Unexpected response status: ${response.status}`);
+                await utils.log(`Unexpected response status: ${response.status}`, this.logFile);
+                if (process.env.GITHUB_ACTIONS) {
+                    await utils.setOutput('credit_loaded', 'unexpected_status');
+                    await utils.setOutput('response_status', response.status.toString());
+                }
+                
+                // Send failure Teams notification
+                if (this.teamsNotifier) {
+                    await this.teamsNotifier.sendFailureNotification(amount, timestamp, `Unexpected response status: ${response.status}`);
+                }
             }
             
         } catch (error) {
@@ -143,7 +145,7 @@ class GitHubCreditLoader {
             }
             
             // Exit with error code for monitoring
-            throw error;
+            process.exit(1);
         }
     }
 

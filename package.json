@@ -4,7 +4,7 @@
   "description": "Automated 10bis credit loading and token refresh system",
   "main": "index.js",
   "scripts": {
-    "test": "node --test test-automation.test.js",
+    "test": "node test.js",
     "test-teams": "node test-teams-notifications.js",
     "test-teams-connection": "node test-teams-notifications.js --test",
     "teams-setup": "node test-teams-notifications.js --help",

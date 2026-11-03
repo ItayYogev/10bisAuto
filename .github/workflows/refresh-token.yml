@@ -33,6 +33,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Create config from secrets
+        run: |
+          cat > config.json << EOF
+          {
+            "AccessToken": "${{ secrets.ACCESS_TOKEN }}",
+            "RefreshToken": "${{ secrets.REFRESH_TOKEN }}",
+            "Amount": "${{ secrets.AMOUNT }}",
+            "MoneycardId": "${{ secrets.MONEYCARD_ID }}"
+          }
+          EOF
+
       - name: Run token refresh
         id: refresh
         run: node github-refresh-token.js
@@ -45,9 +56,6 @@ jobs:
       - name: Update GitHub secrets
         if: steps.refresh.outputs.tokens_updated == 'true'
         uses: actions/github-script@v7
-        env:
-          NEW_ACCESS_TOKEN: ${{ steps.refresh.outputs.access_token }}
-          NEW_REFRESH_TOKEN: ${{ steps.refresh.outputs.refresh_token }}
         with:
           github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           script: |
@@ -61,8 +69,8 @@ jobs:
             });
 
             // Encrypt and update ACCESS_TOKEN if provided
-            if (process.env.NEW_ACCESS_TOKEN) {
-              const accessTokenBytes = Buffer.from(process.env.NEW_ACCESS_TOKEN);
+            if ('${{ steps.refresh.outputs.access_token }}') {
+              const accessTokenBytes = Buffer.from('${{ steps.refresh.outputs.access_token }}');
               const publicKeyBytes = Buffer.from(publicKey.key, 'base64');
               const accessTokenEncrypted = sodium.crypto_box_seal(accessTokenBytes, publicKeyBytes);
 
@@ -77,8 +85,8 @@ jobs:
             }
 
             // Encrypt and update REFRESH_TOKEN if provided
-            if (process.env.NEW_REFRESH_TOKEN) {
-              const refreshTokenBytes = Buffer.from(process.env.NEW_REFRESH_TOKEN);
+            if ('${{ steps.refresh.outputs.refresh_token }}') {
+              const refreshTokenBytes = Buffer.from('${{ steps.refresh.outputs.refresh_token }}');
               const publicKeyBytes = Buffer.from(publicKey.key, 'base64');
               const refreshTokenEncrypted = sodium.crypto_box_seal(refreshTokenBytes, publicKeyBytes);
 

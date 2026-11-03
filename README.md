@@ -4,8 +4,8 @@ An automated system for managing 10bis credit loading and token refresh operatio
 
 ## Features
 
-- **Automatic Token Refresh**: Refreshes authentication tokens before loading credit; standalone refresh is manual
-- **Scheduled Credit Loading**: Primary and fallback runs Sunday-Thursday, with a daily payment-attempt guard
+- **Automatic Token Refresh**: Refreshes authentication tokens every 10 minutes
+- **Scheduled Credit Loading**: Loads 10bis credit daily at 10 AM (excluding weekends)
 - **Microsoft Teams Notifications**: Real-time notifications for success/failure with amount and timestamp
 - **Robust Error Handling**: Comprehensive logging and retry mechanisms
 - **Secure Token Management**: Automatic token updates and encrypted storage
@@ -32,46 +32,6 @@ An automated system for managing 10bis credit loading and token refresh operatio
 - GitHub Personal Access Token
 
 📖 **Setup Guide**: [`GITHUB-ACTIONS-SETUP.md`](GITHUB-ACTIONS-SETUP.md)
-
-### Scheduling reliability and payment safety
-
-- [Load Credit](.github/workflows/load-credit.yml) is scheduled at 07:17, 10:17 and
-  13:17 UTC, Sunday-Thursday. These are 09:17/12:17/15:17 in Israel in winter,
-  and 10:17/13:17/16:17 in summer. GitHub may delay or drop scheduled runs;
-  fallback schedules improve resilience but cannot guarantee a daily run.
-- The workflows remain serialized with token refresh. Before loading, the guard
-  checks prior payment steps (including reruns), using the Israel calendar date.
-  A successful payment blocks another load even if a later log-upload step failed.
-  If a payment failed, was cancelled, or its result is uncertain, automation stops
-  rather than risk a second charge. Verify your actual balance before loading manually.
-- Failures **before** the payment step may be retried by a fallback run. Payment
-  requests themselves are never retried automatically: a timeout does not prove
-  that a payment was rejected. Unreadable run history also prevents payment.
-- If you load manually outside GitHub, set the repository **Actions variable**
-  `CREDIT_SKIP_DATES` to the Israel date (`YYYY-MM-DD`; comma-separated for multiple
-  dates) **before** loading. The guard cannot see payments made on the website.
-  The rollout date `2026-11-02` is excluded because credit was already loaded manually.
-- Keep run history for at least seven days; deleting payment runs can defeat the
-  duplicate-attempt guard. Do not remove or rename the payment step without updating
-  the guard and tests. The guard is conservative, not a payment-provider idempotency key.
-- [Keep Alive](.github/workflows/keep-alive.yml) is now a single monthly workflow,
-  with explicit `contents: write` permission and a manual trigger. It pushes an
-  actual empty commit; merely printing a message does not create repository activity.
-  Repository/organization policies or branch protection may still reject bot writes;
-  inspect any 403 failure rather than assuming the workflow kept scheduling active.
-- Confirm Actions are enabled and these workflows are **active** on the default
-  branch. A disabled workflow cannot wake itself up.
-- Temporary [Schedule Diagnostic (No Payment)](.github/workflows/schedule-diagnostic.yml)
-  runs at minutes 08, 23, 38 and 53 of every hour (UTC). It only records the event,
-  cron expression and actual runner time in the job log and summary, with no
-  checkout, credentials or payment requests. Only an automatically created
-  `schedule` run demonstrates schedule delivery; publication or passing offline
-  tests does not. This does not change or trigger Load Credit. Disable this
-  diagnostic in Actions after collecting evidence to avoid ongoing runner usage.
-
-Run `npm test` for offline regression tests; these never contact 10bis, refresh real
-tokens, send Teams notifications, or load credit. The older `test.js` targets server
-files that are not present in this GitHub-Actions repository.
 
 ## Quick Start
 
@@ -334,8 +294,8 @@ The system interacts with these 10bis API endpoints:
 
 ## Schedule Details
 
-- **Token Refresh**: Immediately before loading; standalone refresh is manual
-- **Credit Loading**: Sunday-Thursday at 07:17, 10:17 and 13:17 UTC, subject to the daily guard
+- **Token Refresh**: Every 10 minutes, 24/7
+- **Credit Loading**: Daily at 10:00 AM Israel time, Monday through Thursday and Sunday
 - **Weekend Skip**: Automatically skips Friday and Saturday
 
 ## Support
